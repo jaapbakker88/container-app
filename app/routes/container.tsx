@@ -8,7 +8,7 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   addLocationToContainer,
   getContainers,
@@ -21,6 +21,9 @@ import { isValidContainerId } from "~/utils/generateId";
 
 import type { ContainerType } from "~/types/definitions";
 import { haversineKm } from "~/utils/haversineKm";
+import QRCode from "~/components/QRCode";
+import Tag from "~/components/Tag";
+import { motion } from "motion/react";
 
 type NearbyContainer = ContainerType & { distanceKm: number };
 
@@ -44,7 +47,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     }
 
     setContainerFullness(code, fullness === "full");
-    return redirect(`/${code}`);
+    return { intent: "fullness", updated: true, isFull: fullness === "full" };
   }
 
   const lat = Number(formData.get("lat"));
@@ -55,7 +58,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 
   addLocationToContainer(lat, lng, code);
-  return redirect(`/${code}`);
+  return { intent: "location", updated: true };
 }
 
 export function loader({ params, request }: LoaderFunctionArgs) {
@@ -123,12 +126,10 @@ export default function Container() {
   const submit = useSubmit();
   const [locError, setLocError] = useState<string | null>(null);
   const [isFindingLoc, setIsFindingLoc] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(true);
+  const [thanks, setThanks] = useState(false);
 
   const hasLocation = container.lat != null && container.lng != null;
-
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
-    containerUrl
-  )}`;
 
   const mapsUrl =
     container.lat != null && container.lng != null
@@ -163,107 +164,120 @@ export default function Container() {
     );
   };
 
+  useEffect(() => {
+    if (actionData && actionData.intent === "fullness" && actionData.updated) {
+      setPanelVisible(false);
+      setThanks(true);
+    }
+  }, [actionData]);
+
+  const displayText = thanks ? "Success! Thank you." : "";
+
   return (
-    <div className="max-w-3xl mx-auto mt-16">
-      <div className="mb-4">
-        <Link to="/" className="text-blue-600 hover:underline text-sm">
-          ← Back to containers
-        </Link>
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">{container.code}</h1>
-        </div>
-        {hasLocation ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-700">
-              Bin status: {container.isFull ? "Full" : "Empty"}
-            </span>
-            <Form method="post" className="flex gap-2">
-              <input type="hidden" name="intent" value="fullness" />
-              <input type="hidden" name="fullness" value="full" />
-              <button
-                type="submit"
-                className="inline-flex items-center rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700"
-                disabled={container.isFull === 1}
-              >
-                Mark full
-              </button>
-            </Form>
-            <Form method="post" className="flex gap-2">
-              <input type="hidden" name="intent" value="fullness" />
-              <input type="hidden" name="fullness" value="empty" />
-              <button
-                type="submit"
-                className="inline-flex items-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700"
-                disabled={container.isFull === 0}
-              >
-                Mark empty
-              </button>
-            </Form>
-          </div>
-        ) : (
-          <div className="flex flex-col items-start gap-2 sm:items-end">
-            <p className="text-sm text-gray-700">
-              No location yet — add it to enable status.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleUseMyLocation}
-                disabled={isFindingLoc}
-                className="inline-flex items-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 disabled:opacity-60"
-              >
-                {isFindingLoc ? "Finding location..." : "Use my location"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+    <>
+      <div className="max-w-3xl mx-auto flex flex-col h-[100dvh] justify-between bg-white/90 overflow-hidden">
+        <header className="mb-4 py-3 px-4 flex items-center justify-between">
+          <Link to="/" className="text-blue-600 hover:underline text-sm">
+            ← Back to containers
+          </Link>
 
-      {container.lat != null && container.lng != null ? (
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold">Location</h2>
-          <div>
-            <p className="text-gray-700">
-              Saved location: {container.lat}, {container.lng}{" "}
+          <h1 className="font-bold text-base text-black/90">bin mate</h1>
+        </header>
+        <div className="flex-1 p-4 flex items-center justify-center">
+          <p className="text-sm font-semibold text-gray-500">{displayText}</p>
+        </div>
+
+        <motion.div
+          className="flex flex-col bg-white rounded-b rounded-[20px] overflow-auto"
+          style={{ boxShadow: "0 -3px 2px 1px rgba(0,0,0,0.03" }}
+          initial={{ y: 0, opacity: 1 }}
+          animate={
+            panelVisible ? { y: 0, opacity: 1 } : { y: "105%", opacity: 0 }
+          }
+          transition={{ duration: 0.35, ease: "easeInOut" }}
+        >
+          <div className="text-black px-4 py-3">
+            <div className="flex justify-between items-center">
+              <p>ID: {container.code}</p>
               {mapsUrl ? (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center text-blue-600 hover:underline"
-                >
-                  Open in Google Maps
-                </a>
+                <p className="text-xs">
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center text-blue-600 hover:underline"
+                  >
+                    Open in Google Maps
+                  </a>
+                </p>
               ) : null}
+            </div>
+
+            <p>
+              Container status:{" "}
+              {container.isFull ? (
+                <Tag type="danger">Full</Tag>
+              ) : (
+                <Tag type="success">Empty</Tag>
+              )}
             </p>
-            {staticMapUrl ? (
-              <div className="mt-4">
-                <img
-                  src={staticMapUrl}
-                  alt="Static map preview"
-                  className="w-full rounded border"
-                />
-                {mapAttribution ? (
-                  <p className="text-xs text-gray-500">{mapAttribution}</p>
-                ) : null}
-              </div>
-            ) : null}
           </div>
-        </div>
-      ) : null}
+          <div
+            className="w-full border overflow-hidden"
+            style={{ aspectRatio: "16 / 9" }}
+          >
+            {staticMapUrl ? (
+              <img
+                src={staticMapUrl}
+                alt="Nearby containers map"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <p className="text-sm text-gray-700">
+                  No location yet — add it to enable status.
+                </p>
+              </div>
+            )}
+          </div>
+          {hasLocation ? (
+            <div className="w-full flex">
+              <Form method="post" className="w-full">
+                <input type="hidden" name="intent" value="fullness" />
+                <input type="hidden" name="fullness" value="full" />
+                <button
+                  type="submit"
+                  className="block w-full bg-rose-600 px-3 py-4 text-white hover:bg-rose-700"
+                  disabled={container.isFull === 1}
+                >
+                  Mark full
+                </button>
+              </Form>
+              <Form method="post" className="w-full">
+                <input type="hidden" name="intent" value="fullness" />
+                <input type="hidden" name="fullness" value="empty" />
+                <button
+                  type="submit"
+                  className="block w-full bg-emerald-700 px-3 py-4 text-white hover:bg-emerald-900"
+                  disabled={container.isFull === 0}
+                >
+                  Mark empty
+                </button>
+              </Form>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleUseMyLocation}
+              disabled={isFindingLoc}
+              className="block w-full bg-emerald-700 px-3 py-4 text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {isFindingLoc ? "Finding location..." : "Use my location"}
+            </button>
+          )}
+          {/* <QRCode container={container} containerUrl={containerUrl} /> */}
 
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-1">{container.code}</h2>
-        <img
-          src={qrSrc}
-          alt={`QR code for ${containerUrl}`}
-          className="w-84 h- mt-4"
-        />
-      </div>
-
-      {hasLocation && nearby.length > 0 ? (
+          {/* {hasLocation && nearby.length > 0 ? (
         <div className="mt-10">
           <h2 className="text-xl font-semibold">Closest empty containers</h2>
           <ul className="mt-3 space-y-2">
@@ -279,7 +293,9 @@ export default function Container() {
             ))}
           </ul>
         </div>
-      ) : null}
-    </div>
+      ) : null} */}
+        </motion.div>
+      </div>
+    </>
   );
 }
