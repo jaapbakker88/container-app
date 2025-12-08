@@ -45,14 +45,14 @@ export default function Home() {
   const actionData = useActionData<typeof action>();
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto p-4">
       <div className="max-w-3xl mx-auto mt-16">
-        <div className="flex items-center justify-between gap-3">
+        <div>
           <h1 className="font-bold text-2xl">Registered Containers</h1>
           <Form method="post" className="flex items-center gap-2">
             <button
               type="submit"
-              className="inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              className="block items-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 mt-4"
             >
               Register new container
             </button>

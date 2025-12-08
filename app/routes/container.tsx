@@ -113,7 +113,7 @@ export function loader({ params, request }: LoaderFunctionArgs) {
         ),
       }))
       .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, 5);
+      .slice(0, 3);
   }
 
   return { container, containerUrl, staticMapUrl, mapAttribution, nearby };
@@ -128,6 +128,7 @@ export default function Container() {
   const [isFindingLoc, setIsFindingLoc] = useState(false);
   const [panelVisible, setPanelVisible] = useState(true);
   const [thanks, setThanks] = useState(false);
+  const [showNearby, setShowNearby] = useState(container.isFull === 1);
 
   const hasLocation = container.lat != null && container.lng != null;
 
@@ -168,14 +169,13 @@ export default function Container() {
     if (actionData && actionData.intent === "fullness" && actionData.updated) {
       setPanelVisible(false);
       setThanks(true);
+      setShowNearby(actionData.isFull ?? false);
     }
   }, [actionData]);
 
-  const displayText = thanks ? "Success! Thank you." : "";
-
   return (
     <>
-      <div className="max-w-3xl mx-auto flex flex-col h-[100dvh] justify-between bg-white/90 overflow-hidden">
+      <div className="max-w-3xl mx-auto flex flex-col h-[100dvh] bg-gray-50 overflow-hidden">
         <header className="mb-4 py-3 px-4 flex items-center justify-between">
           <Link to="/" className="text-blue-600 hover:underline text-sm">
             ← Back to containers
@@ -183,13 +183,58 @@ export default function Container() {
 
           <h1 className="font-bold text-base text-black/90">bin mate</h1>
         </header>
-        <div className="flex-1 p-4 flex items-center justify-center">
-          <p className="text-sm font-semibold text-gray-500">{displayText}</p>
+        <div className=" p-4 flex items-center">
+          {thanks ? (
+            <p className="text-sm font-semibold text-gray-500 text-center text-balanced px-8">
+              Success! Thank you for keeping the neighborhood clean!
+            </p>
+          ) : (
+            <p className="text-sm font-semibold text-gray-500 text-center text-balanced px-8">
+              Quick update? Mark this bin full or empty to help others find the
+              right spot.
+            </p>
+          )}
         </div>
 
+        {showNearby && hasLocation && nearby.length > 0 ? (
+          <motion.div
+            className="mt-10 px-4 py-2"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <h2 className="text-xl font-semibold text-gray-800 text-center">
+              Empty containers nearby
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {nearby.map((item) => (
+                <li
+                  key={item.code}
+                  className="border border-gray-300 rounded px-3 py-2"
+                >
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${container.lat},${container.lng}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <p className="font-medium text-gray-400">{item.code}</p>
+                      {item.isFull ? (
+                        <Tag type="danger">Full</Tag>
+                      ) : (
+                        <Tag type="success">Empty</Tag>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-700">
+                      {item.distanceKm.toFixed(2)} km away • type: {item.type}
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        ) : null}
         <motion.div
-          className="flex flex-col bg-white rounded-b rounded-[20px] overflow-auto"
-          style={{ boxShadow: "0 -3px 2px 1px rgba(0,0,0,0.03" }}
+          className="flex flex-col bg-white rounded-b rounded-[20px] overflow-auto absolute bottom-0"
+          style={{ boxShadow: "0 -3px 3px 0 rgba(0,0,0,0.05" }}
           initial={{ y: 0, opacity: 1 }}
           animate={
             panelVisible ? { y: 0, opacity: 1 } : { y: "105%", opacity: 0 }
@@ -276,24 +321,6 @@ export default function Container() {
             </button>
           )}
           {/* <QRCode container={container} containerUrl={containerUrl} /> */}
-
-          {/* {hasLocation && nearby.length > 0 ? (
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold">Closest empty containers</h2>
-          <ul className="mt-3 space-y-2">
-            {nearby.map((item) => (
-              <li key={item.code} className="border rounded px-3 py-2">
-                <Link to={"/" + item.code}>
-                  <div className="font-medium">{item.code}</div>
-                  <div className="text-sm text-gray-700">
-                    {item.distanceKm.toFixed(2)} km away • type: {item.type}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null} */}
         </motion.div>
       </div>
     </>
