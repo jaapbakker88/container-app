@@ -143,6 +143,9 @@ export default function Container() {
   const [panelVisible, setPanelVisible] = useState(true);
   const [thanks, setThanks] = useState(false);
   const [showNearby, setShowNearby] = useState(container.isFull === 1);
+  const [showPrintLabel, setShowPrintLabel] = useState(false);
+
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(containerUrl)}`;
 
   const hasLocation = container.lat != null && container.lng != null;
 
@@ -187,8 +190,28 @@ export default function Container() {
     }
   }, [actionData]);
 
+  const CONTAINER_PRINT_STYLES = `
+    @media print {
+      body * { visibility: hidden; }
+      #container-print-label, #container-print-label * { visibility: visible; }
+      #container-print-label {
+        position: fixed;
+        top: 0; left: 0;
+        width: 9cm; height: 9cm;
+        padding: 0.5cm;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: white;
+      }
+    }
+  `;
+
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: CONTAINER_PRINT_STYLES }} />
       <div className="max-w-3xl mx-auto flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-950 overflow-hidden">
         <header className="mb-4 py-3 px-4 flex items-center justify-between">
           <Link
@@ -203,6 +226,47 @@ export default function Container() {
         </header>
 
         <div className="flex-1 flex flex-col px-4 pb-[280px] overflow-y-auto">
+          <div className="flex justify-end mb-1">
+            <button
+              type="button"
+              onClick={() => setShowPrintLabel((v) => !v)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline py-1"
+            >
+              {showPrintLabel ? "Hide label" : "Print label"}
+            </button>
+          </div>
+
+          {showPrintLabel && (
+            <div className="mb-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col items-center gap-2">
+              <div
+                id="container-print-label"
+                className="flex flex-col items-center gap-2"
+              >
+                <p className="text-xs font-bold text-gray-400 tracking-widest uppercase">
+                  BINMATE
+                </p>
+                <img
+                  src={qrSrc}
+                  alt={`QR code for bin ${container.code}`}
+                  className="w-36 h-36"
+                />
+                <p className="font-mono text-lg font-bold text-gray-900 dark:text-white tracking-widest">
+                  {container.code}
+                </p>
+                <span className="text-xs text-gray-500 capitalize">
+                  {container.type}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Print label
+              </button>
+            </div>
+          )}
+
           {thanks ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
               <p className="text-2xl mb-1">✓</p>
