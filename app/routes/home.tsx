@@ -1,5 +1,4 @@
 import type { Route } from "./+types/home";
-import { addContainer, getContainers } from "~/db/sqlite";
 import {
   Form,
   Link,
@@ -20,6 +19,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({ params }: LoaderFunctionArgs) {
+  const { getContainers } = await import("~/db/sqlite.server");
   const containers = getContainers();
   return { containers };
 }
@@ -27,6 +27,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
 
+  const { addContainer } = await import("~/db/sqlite.server");
   for (let i = 0; i < 5; i++) {
     const code = generateId();
     const result = addContainer(code, null, null);
@@ -66,7 +67,7 @@ export default function Home() {
         <ul className="mt-8">
           {containers.map((container) => (
             <li
-              className="p-1 px-2 bg-white/10 mt-1 rounded-sm text-sm hover:bg-white/7"
+              className="p-1 px-2 mt-1 rounded-sm text-sm bg-gray-100 hover:bg-gray-200"
               key={container.code}
             >
               <Link to={container.code} className=" flex gap-2">
@@ -82,6 +83,37 @@ export default function Home() {
         </ul>
       </div>
       <footer className="max-w-3xl mx-auto mt-12 border-t border-white/10 pt-6 text-sm text-gray-700 space-y-2">
+        <ul>
+          <li>
+            <Link to="/profile" className="text-blue-600  hover:underline">
+              See my stats
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/about#why-bin-mate"
+              className="text-blue-600  hover:underline"
+            >
+              Why Bin Mate
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/about#how-it-works"
+              className="text-blue-600  hover:underline"
+            >
+              How this works?
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/about#contribute"
+              className="text-blue-600  hover:underline"
+            >
+              Contribute
+            </Link>
+          </li>
+        </ul>
         <div>
           <h2 className="font-semibold text-gray-900">About</h2>
           <p>

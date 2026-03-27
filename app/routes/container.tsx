@@ -4,18 +4,12 @@ import {
   redirect,
   useActionData,
   useLoaderData,
+  useRouteLoaderData,
   useSubmit,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
 import { useEffect, useState } from "react";
-import {
-  addLocationToContainer,
-  getContainers,
-  getContainer,
-  getOrCreateContainer,
-  setContainerFullness,
-} from "~/db/sqlite";
 
 import { isValidContainerId } from "~/utils/generateId";
 
@@ -23,11 +17,16 @@ import type { ContainerType } from "~/types/definitions";
 import { haversineKm } from "~/utils/haversineKm";
 import QRCode from "~/components/QRCode";
 import Tag from "~/components/Tag";
-import { motion } from "motion/react";
+import { motion, type PanInfo } from "motion/react";
+import { getOrCreateUser } from "~/db/sqlite.server";
 
 type NearbyContainer = ContainerType & { distanceKm: number };
 
 export async function action({ request, params }: ActionFunctionArgs) {
+  const { user } = getOrCreateUser(request);
+  const { addLocationToContainer, getOrCreateContainer, setContainerFullness } =
+    await import("~/db/sqlite.server");
+
   const code = params.containerId;
   if (!code || !isValidContainerId(code)) {
     throw new Response("Not found", { status: 404 });
@@ -46,7 +45,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       return { error: "Please choose full or empty." };
     }
 
-    setContainerFullness(code, fullness === "full");
+    setContainerFullness(code, fullness === "full", user.id);
     return { intent: "fullness", updated: true, isFull: fullness === "full" };
   }
 
@@ -61,14 +60,17 @@ export async function action({ request, params }: ActionFunctionArgs) {
   return { intent: "location", updated: true };
 }
 
-export function loader({ params, request }: LoaderFunctionArgs) {
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const { getContainers, getContainer, getOrCreateContainer } =
+    await import("~/db/sqlite.server");
+
   const code = params.containerId;
   if (!code || !isValidContainerId(code)) {
     throw new Response("Not found", { status: 404 });
   }
 
   // Auto-create on valid IDs to allow self-registration
-  const container =
+  const { container, reports } =
     (getOrCreateContainer(code, "paper") as ContainerType | undefined) ??
     (getContainer(code) as ContainerType | undefined);
 
@@ -116,13 +118,27 @@ export function loader({ params, request }: LoaderFunctionArgs) {
       .slice(0, 3);
   }
 
-  return { container, containerUrl, staticMapUrl, mapAttribution, nearby };
+  return {
+    container,
+    reports,
+    containerUrl,
+    staticMapUrl,
+    mapAttribution,
+    nearby,
+  };
 }
 
 export default function Container() {
-  const { container, containerUrl, staticMapUrl, mapAttribution, nearby } =
-    useLoaderData<typeof loader>();
+  const {
+    container,
+    reports,
+    containerUrl,
+    staticMapUrl,
+    mapAttribution,
+    nearby,
+  } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
+  const { user } = useRouteLoaderData("root");
   const submit = useSubmit();
   const [locError, setLocError] = useState<string | null>(null);
   const [isFindingLoc, setIsFindingLoc] = useState(false);
@@ -173,17 +189,34 @@ export default function Container() {
     }
   }, [actionData]);
 
+  useEffect(() => {
+    setPanelVisible(true);
+    setThanks(false);
+    setShowNearby(container.isFull === 1);
+  }, [container.code]);
+
+  const handleDragEnd = (_: PointerEvent, info: PanInfo) => {
+    if (info.offset.y > 40 || info.velocity.y > 500) {
+      setPanelVisible(false);
+    } else {
+      setPanelVisible(true);
+    }
+  };
+
+  const handleHandleClick = () => {
+    setPanelVisible((prev) => !prev);
+  };
   return (
-    <>
-      <div className="max-w-3xl mx-auto flex flex-col h-[100dvh] bg-gray-50 overflow-hidden">
-        <header className="mb-4 py-3 px-4 flex items-center justify-between">
+    <div className="fixed inset-0 flex justify-center bg-gray-50">
+      <div className="relative w-full max-w-3xl flex flex-col h-full overflow-hidden">
+        <header className="py-3 px-4 flex items-center justify-between">
           <Link to="/" className="text-blue-600 hover:underline text-sm">
-            ← Back to containers
+            ← Back to overview
           </Link>
 
           <h1 className="font-bold text-base text-black/90">bin mate</h1>
         </header>
-        <div className=" p-4 flex items-center">
+        <div className="p-4 flex items-center">
           {thanks ? (
             <p className="text-sm font-semibold text-gray-500 text-center text-balanced px-8">
               Success! Thank you for keeping the neighborhood clean!
@@ -195,10 +228,21 @@ export default function Container() {
             </p>
           )}
         </div>
+        <div className="p-4">
+          <ul className="list-disc ml-4">
+            {reports?.map((rep) => {
+              return (
+                <li key={rep.id}>
+                  {rep.status} - {rep.created_at}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
         {showNearby && hasLocation && nearby.length > 0 ? (
           <motion.div
-            className="mt-10 px-4 py-2"
+            className="mt-4 px-4"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: "easeOut" }}
@@ -212,9 +256,7 @@ export default function Container() {
                   key={item.code}
                   className="border border-gray-300 rounded px-3 py-2"
                 >
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${container.lat},${container.lng}`}
-                  >
+                  <Link to={`/${item.code}`}>
                     <div className="flex justify-between items-center">
                       <p className="font-medium text-gray-400">{item.code}</p>
                       {item.isFull ? (
@@ -226,21 +268,40 @@ export default function Container() {
                     <div className="text-sm text-gray-700">
                       {item.distanceKm.toFixed(2)} km away • type: {item.type}
                     </div>
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
           </motion.div>
         ) : null}
         <motion.div
-          className="flex flex-col bg-white rounded-b rounded-[20px] overflow-auto absolute bottom-0"
-          style={{ boxShadow: "0 -3px 3px 0 rgba(0,0,0,0.05" }}
+          className="flex flex-col bg-white rounded-t-[20px] overflow-auto absolute bottom-0 z-10 w-full"
+          style={{
+            boxShadow: "0 -3px 3px 0 rgba(0,0,0,0.05)",
+            touchAction: "pan-y",
+          }}
           initial={{ y: 0, opacity: 1 }}
           animate={
-            panelVisible ? { y: 0, opacity: 1 } : { y: "105%", opacity: 0 }
+            panelVisible
+              ? { y: 0, opacity: 1 }
+              : { y: "calc(100% - 24px)", opacity: 1 }
           }
           transition={{ duration: 0.35, ease: "easeInOut" }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 180 }}
+          dragElastic={0.08}
+          onDragEnd={handleDragEnd}
         >
+          <div className="w-full flex justify-center pt-3 pb-2">
+            <motion.div
+              className="h-[5px] w-[60px] rounded-full bg-gray-300 cursor-pointer"
+              onClick={handleHandleClick}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 140 }}
+              dragElastic={0.12}
+              onDragEnd={handleDragEnd}
+            />
+          </div>
           <div className="text-black px-4 py-3">
             <div className="flex justify-between items-center">
               <p>ID: {container.code}</p>
@@ -267,6 +328,7 @@ export default function Container() {
               )}
             </p>
           </div>
+
           <div
             className="w-full border overflow-hidden"
             style={{ aspectRatio: "16 / 9" }}
@@ -285,6 +347,7 @@ export default function Container() {
               </div>
             )}
           </div>
+
           {hasLocation ? (
             <div className="w-full flex">
               <Form method="post" className="w-full">
@@ -323,6 +386,6 @@ export default function Container() {
           {/* <QRCode container={container} containerUrl={containerUrl} /> */}
         </motion.div>
       </div>
-    </>
+    </div>
   );
 }

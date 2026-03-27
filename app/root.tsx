@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  type LoaderFunctionArgs,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -22,6 +23,15 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
 ];
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (!import.meta.env.SSR) return Response.json({});
+  const { getOrCreateUser } = await import("~/db/sqlite.server");
+  const { setCookie, user } = getOrCreateUser(request);
+  const headers = new Headers();
+  if (setCookie) headers.append("Set-Cookie", setCookie);
+  return Response.json({ user }, { headers });
+};
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
