@@ -15,9 +15,17 @@ db.exec(`
     lat REAL,
     lng REAL,
     isFull INTEGER DEFAULT 0,
-    type TEXT NOT NULL CHECK (type IN ('paper', 'plastic', 'glass', 'mixed'))
+    type TEXT NOT NULL CHECK (type IN ('paper', 'plastic', 'glass', 'mixed')),
+    updatedAt TEXT
   );
 `);
+
+// Migration for existing databases
+try {
+  db.exec("ALTER TABLE containers ADD COLUMN updatedAt TEXT");
+} catch {
+  // Column already exists
+}
 
 export function getContainers(): ContainerType[] {
   return db.prepare("SELECT * FROM containers").all() as ContainerType[];
@@ -33,7 +41,7 @@ export function getOrCreateContainer(
   code: string,
   type: ContainerType["type"]
 ): ContainerType | undefined {
-  db.prepare("INSERT OR IGNORE INTO containers (code, type) VALUES (?, ?)").run(
+  db.prepare("INSERT OR IGNORE INTO containers (code, type, updatedAt) VALUES (?, ?, datetime('now'))").run(
     code,
     type ?? "paper"
   );
@@ -48,18 +56,19 @@ export function addLocationToContainer(
   code?: string
 ): ContainerType | null {
   // If a code is provided, update that specific container; otherwise update the most recently created one.
-  const target =
+  const target = (
     code !== undefined
       ? db.prepare("SELECT id, code FROM containers WHERE code = ?").get(code)
       : db
           .prepare("SELECT id, code FROM containers ORDER BY id DESC LIMIT 1")
-          .get();
+          .get()
+  ) as { id: number; code: string } | undefined;
 
   if (!target) {
     return null;
   }
 
-  db.prepare("UPDATE containers SET lat = ?, lng = ? WHERE id = ?").run(
+  db.prepare("UPDATE containers SET lat = ?, lng = ?, updatedAt = datetime('now') WHERE id = ?").run(
     lat,
     lng,
     target.id
@@ -76,7 +85,7 @@ export function markFull(code: string): RunResult {
 
 export function setContainerFullness(code: string, isFull: boolean): RunResult {
   return db
-    .prepare("UPDATE containers SET isFull = ? WHERE code = ?")
+    .prepare("UPDATE containers SET isFull = ?, updatedAt = datetime('now') WHERE code = ?")
     .run(isFull ? 1 : 0, code);
 }
 

@@ -1,4 +1,4 @@
-type ContainerTypes = "paper" | "glass" | "mixed";
+type ContainerTypes = "paper" | "plastic" | "glass" | "mixed";
 
 export type ContainerType = {
   id?: number;
@@ -7,4 +7,5 @@ export type ContainerType = {
   lat: number | null;
   lng: number | null;
   isFull: number; // 0 or 1
+  updatedAt?: string | null;
 };
