@@ -1,16 +1,11 @@
 import type { Route } from "./+types/home";
-import { addContainer, getContainers } from "~/db/sqlite";
+import { getContainers } from "~/db/sqlite";
 import {
-  Form,
   Link,
-  redirect,
-  useActionData,
   useLoaderData,
-  type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
 import { useState } from "react";
-import { generateId } from "~/utils/generateId";
 import { haversineKm } from "~/utils/haversineKm";
 import type { ContainerType } from "~/types/definitions";
 import Tag from "~/components/Tag";
@@ -27,27 +22,12 @@ export async function loader({ params }: LoaderFunctionArgs) {
   return { containers };
 }
 
-export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-
-  for (let i = 0; i < 5; i++) {
-    const code = generateId();
-    const result = addContainer(code, null, null);
-    if (result.changes > 0) {
-      return redirect(`/${code}`);
-    }
-  }
-
-  return { error: "Could not create a container. Please try again." };
-}
-
 type NearbyResult = ContainerType & { distanceKm: number };
 
 export default function Home() {
   const { containers } = useLoaderData() as {
     containers: ContainerType[];
   };
-  const actionData = useActionData<typeof action>();
   const [nearbyEmpty, setNearbyEmpty] = useState<NearbyResult[] | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
@@ -96,14 +76,12 @@ export default function Home() {
         </p>
 
         <div className="flex items-center gap-3 mt-4">
-          <Form method="post">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
-            >
-              + Register new container
-            </button>
-          </Form>
+          <Link
+            to="/register"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
+          >
+            + Register new container
+          </Link>
           <button
             type="button"
             onClick={handleFindNearby}
@@ -117,11 +95,6 @@ export default function Home() {
         {locError ? (
           <p className="text-red-500 dark:text-red-400 text-sm mt-2">
             {locError}
-          </p>
-        ) : null}
-        {actionData?.error ? (
-          <p className="text-red-500 dark:text-red-400 text-sm mt-2">
-            {actionData.error}
           </p>
         ) : null}
 
