@@ -1,0 +1,13 @@
+{
+  "name": "BINMATE",
+  "short_name": "BINMATE",
+  "description": "Track recycling container status near you",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f9fafb",
+  "theme_color": "#059669",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}

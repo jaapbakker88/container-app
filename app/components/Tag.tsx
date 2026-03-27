@@ -9,9 +9,11 @@ function Tag({
 }) {
   return (
     <span
-      className={clsx("px-2 px-1 text-xs font-semibold rounded-sm border", {
-        ["bg-teal-100 border-teal-200 text-teal-900"]: type === "success",
-        ["bg-red-100 border-red-200 text-red-900"]: type === "danger",
+      className={clsx("px-2 py-0.5 text-xs font-semibold rounded-full border", {
+        ["bg-teal-100 border-teal-200 text-teal-900 dark:bg-teal-900/30 dark:border-teal-800 dark:text-teal-300"]:
+          type === "success",
+        ["bg-red-100 border-red-200 text-red-900 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300"]:
+          type === "danger",
       })}
     >
       {children}
