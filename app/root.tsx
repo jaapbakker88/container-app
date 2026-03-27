@@ -5,10 +5,20 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  type LoaderFunctionArgs,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  if (!import.meta.env.SSR) return Response.json({});
+  const { getOrCreateUser } = await import("~/db/sqlite");
+  const { setCookie, user } = getOrCreateUser(request);
+  const headers = new Headers();
+  if (setCookie) headers.append("Set-Cookie", setCookie);
+  return Response.json({ user }, { headers });
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

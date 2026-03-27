@@ -14,6 +14,7 @@ import {
   getContainers,
   getContainer,
   getOrCreateContainer,
+  getOrCreateUser,
   setContainerFullness,
 } from "~/db/sqlite";
 
@@ -44,6 +45,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
     throw new Response("Not found", { status: 404 });
   }
 
+  const { user } = getOrCreateUser(request);
+
   // Ensure container exists if a valid code is used.
   getOrCreateContainer(code, "paper");
 
@@ -57,7 +60,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       return { error: "Please choose full or empty." };
     }
 
-    setContainerFullness(code, fullness === "full");
+    setContainerFullness(code, fullness === "full", user.id);
     return { intent: "fullness", updated: true, isFull: fullness === "full" };
   }
 

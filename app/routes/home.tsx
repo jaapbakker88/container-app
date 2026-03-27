@@ -201,22 +201,21 @@ export default function Home() {
       </div>
 
       <footer className="max-w-3xl mx-auto mt-12 border-t border-gray-200 dark:border-gray-800 pt-6 text-sm text-gray-500 dark:text-gray-400 space-y-2">
-        <div>
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">
+        <div className="flex gap-4">
+          <Link to="/profile" className="text-blue-600 dark:text-blue-400 hover:underline">
+            My profile
+          </Link>
+          <Link to="/about" className="text-blue-600 dark:text-blue-400 hover:underline">
             About
-          </h2>
-          <p>
-            BINMATE helps track recycling containers and their status across
-            locations so you always know where to drop off materials.
-          </p>
+          </Link>
         </div>
         <div>
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">
             Privacy
           </h2>
           <p>
-            We do not store any personal user data. Location entries are tied
-            only to containers.
+            We only store an anonymous device ID in a cookie to track your
+            contributions. No personal data is collected.
           </p>
         </div>
       </footer>

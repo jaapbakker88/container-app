@@ -1,7 +1,10 @@
 import Database, { type RunResult } from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-import type { ContainerType } from "~/types/definitions";
+import type { ContainerType, StatusType, UserType } from "~/types/definitions";
+import { generateRandomUsername } from "~/utils/generateRandomUsername";
+import { generateUUID } from "~/utils/generateUUID";
+import { parseCookies } from "~/utils/parseCookies";
 
 const dbPath = process.env.DB_PATH ?? "./data/app.db";
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -18,14 +21,33 @@ db.exec(`
     type TEXT NOT NULL CHECK (type IN ('paper', 'plastic', 'glass', 'mixed')),
     updatedAt TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    device_id TEXT UNIQUE NOT NULL,
+    reports_count INTEGER NOT NULL DEFAULT 0,
+    last_reported_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    container_code TEXT NOT NULL,
+    user_id INTEGER,
+    status TEXT NOT NULL CHECK (status IN ('full','empty')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(container_code) REFERENCES containers(code),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_users_device_id ON users(device_id);
+  CREATE INDEX IF NOT EXISTS idx_reports_user_id ON reports(user_id);
+  CREATE INDEX IF NOT EXISTS idx_reports_container_code ON reports(container_code);
 `);
 
-// Migration for existing databases
-try {
-  db.exec("ALTER TABLE containers ADD COLUMN updatedAt TEXT");
-} catch {
-  // Column already exists
-}
+// Migrations for existing databases
+try { db.exec("ALTER TABLE containers ADD COLUMN updatedAt TEXT"); } catch { /* already exists */ }
 
 export function getContainers(): ContainerType[] {
   return db.prepare("SELECT * FROM containers").all() as ContainerType[];
@@ -45,8 +67,6 @@ export function getOrCreateContainer(
     code,
     type ?? "paper"
   );
-
-  // Return the existing or newly inserted row
   return getContainer(code);
 }
 
@@ -55,18 +75,13 @@ export function addLocationToContainer(
   lng: number,
   code?: string
 ): ContainerType | null {
-  // If a code is provided, update that specific container; otherwise update the most recently created one.
   const target = (
     code !== undefined
       ? db.prepare("SELECT id, code FROM containers WHERE code = ?").get(code)
-      : db
-          .prepare("SELECT id, code FROM containers ORDER BY id DESC LIMIT 1")
-          .get()
+      : db.prepare("SELECT id, code FROM containers ORDER BY id DESC LIMIT 1").get()
   ) as { id: number; code: string } | undefined;
 
-  if (!target) {
-    return null;
-  }
+  if (!target) return null;
 
   db.prepare("UPDATE containers SET lat = ?, lng = ?, updatedAt = datetime('now') WHERE id = ?").run(
     lat,
@@ -78,12 +93,16 @@ export function addLocationToContainer(
 }
 
 export function markFull(code: string): RunResult {
-  return db
-    .prepare("UPDATE containers SET isFull = 1 WHERE code = ?")
-    .run(code);
+  return db.prepare("UPDATE containers SET isFull = 1 WHERE code = ?").run(code);
 }
 
-export function setContainerFullness(code: string, isFull: boolean): RunResult {
+export function setContainerFullness(code: string, isFull: boolean, userId: number): RunResult {
+  createReport(code, isFull ? "full" : "empty", userId);
+
+  db.prepare(
+    "UPDATE users SET reports_count = reports_count + 1, last_reported_at = datetime('now') WHERE id = ?"
+  ).run(userId);
+
   return db
     .prepare("UPDATE containers SET isFull = ?, updatedAt = datetime('now') WHERE code = ?")
     .run(isFull ? 1 : 0, code);
@@ -96,10 +115,47 @@ export function addContainer(
   type: ContainerType["type"] = "paper"
 ): RunResult {
   return db
-    .prepare(
-      "INSERT OR IGNORE INTO containers (code, lat, lng, type) VALUES (?, ?, ?, ?)"
-    )
+    .prepare("INSERT OR IGNORE INTO containers (code, lat, lng, type) VALUES (?, ?, ?, ?)")
     .run(code, lat, lng, type);
+}
+
+export function createReport(code: string, status: StatusType, userId: number): RunResult {
+  return db
+    .prepare("INSERT INTO reports (container_code, status, user_id) VALUES (?, ?, ?)")
+    .run(code, status, userId);
+}
+
+export function findUserByDeviceId(deviceId: string): UserType | undefined {
+  return db.prepare("SELECT * FROM users WHERE device_id = ?").get(deviceId) as
+    | UserType
+    | undefined;
+}
+
+export function insertUser(deviceId: string, name: string): UserType {
+  db.prepare(
+    `INSERT INTO users (device_id, name)
+     VALUES (?, ?)
+     ON CONFLICT(device_id) DO UPDATE SET device_id = excluded.device_id`
+  ).run(deviceId, name);
+  return findUserByDeviceId(deviceId) as UserType;
+}
+
+export function getOrCreateUser(request: Request): { user: UserType; setCookie: string | null } {
+  const cookies = parseCookies(request.headers.get("Cookie"));
+  let deviceId = cookies.device_id;
+  let setCookie: string | null = null;
+
+  if (!deviceId) {
+    deviceId = generateUUID();
+    setCookie = `device_id=${deviceId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`;
+  }
+
+  let user = findUserByDeviceId(deviceId);
+  if (!user) {
+    user = insertUser(deviceId, generateRandomUsername());
+  }
+
+  return { user, setCookie };
 }
 
 export { db };
