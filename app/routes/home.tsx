@@ -5,7 +5,7 @@ import {
   useLoaderData,
   type LoaderFunctionArgs,
 } from "react-router";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { haversineKm } from "~/utils/haversineKm";
 import type { ContainerType } from "~/types/definitions";
 import Tag from "~/components/Tag";
@@ -32,6 +32,47 @@ export default function Home() {
   const [nearbyEmpty, setNearbyEmpty] = useState<NearbyResult[] | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
+  const [addressQuery, setAddressQuery] = useState("");
+  const [addressSearching, setAddressSearching] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  const findNearbyFromCoords = (latitude: number, longitude: number) => {
+    const results = containers
+      .filter(
+        (c): c is ContainerType & { lat: number; lng: number } =>
+          c.lat != null && c.lng != null && c.isFull === 0
+      )
+      .map((c) => ({
+        ...c,
+        distanceKm: haversineKm(latitude, longitude, c.lat, c.lng),
+      }))
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 5);
+    setNearbyEmpty(results);
+  };
+
+  const handleAddressSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!addressQuery.trim()) return;
+    setAddressSearching(true);
+    setAddressError(null);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressQuery.trim())}&format=json&limit=1`
+      );
+      const data = await res.json();
+      if (!data.length) {
+        setAddressError("Address not found. Try a more specific search.");
+        return;
+      }
+      findNearbyFromCoords(parseFloat(data[0].lat), parseFloat(data[0].lon));
+      setLocError(null);
+    } catch {
+      setAddressError("Search failed. Please try again.");
+    } finally {
+      setAddressSearching(false);
+    }
+  };
 
   const handleFindNearby = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -43,19 +84,7 @@ export default function Home() {
 
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const { latitude, longitude } = coords;
-        const results = containers
-          .filter(
-            (c): c is ContainerType & { lat: number; lng: number } =>
-              c.lat != null && c.lng != null && c.isFull === 0
-          )
-          .map((c) => ({
-            ...c,
-            distanceKm: haversineKm(latitude, longitude, c.lat, c.lng),
-          }))
-          .sort((a, b) => a.distanceKm - b.distanceKm)
-          .slice(0, 5);
-        setNearbyEmpty(results);
+        findNearbyFromCoords(coords.latitude, coords.longitude);
         setLocating(false);
       },
       (err) => {
@@ -88,9 +117,30 @@ export default function Home() {
         </button>
 
         {locError ? (
-          <p className="text-red-500 dark:text-red-400 text-sm mt-3">
-            {locError}
-          </p>
+          <div className="mt-4 w-full max-w-xs">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              Can't get your location — try searching by address:
+            </p>
+            <form onSubmit={handleAddressSearch} className="flex gap-2">
+              <input
+                type="text"
+                value={addressQuery}
+                onChange={(e) => setAddressQuery(e.target.value)}
+                placeholder="Postcode or address"
+                className="flex-1 min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <button
+                type="submit"
+                disabled={addressSearching || !addressQuery.trim()}
+                className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {addressSearching ? "…" : "Search"}
+              </button>
+            </form>
+            {addressError ? (
+              <p className="text-red-500 dark:text-red-400 text-xs mt-2">{addressError}</p>
+            ) : null}
+          </div>
         ) : null}
 
         {/* Results */}

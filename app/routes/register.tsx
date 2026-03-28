@@ -78,7 +78,7 @@ export default function Register() {
   const { origin } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedType, setSelectedType] = useState<ContainerType["type"]>("paper");
   const [container, setContainer] = useState<{
     code: string;
@@ -89,7 +89,7 @@ export default function Register() {
   useEffect(() => {
     if (actionData?.ok && actionData.code) {
       setContainer({ code: actionData.code, type: actionData.type });
-      setStep(3);
+      setStep(2);
     }
   }, [actionData]);
 
@@ -119,55 +119,21 @@ export default function Register() {
         <h1 className="font-bold text-base text-black/90 dark:text-white">
           bin mate
         </h1>
-        <StepIndicator current={step} total={5} />
+        <StepIndicator current={step} total={4} />
       </header>
 
       <div className="flex-1 px-4 pt-4 pb-10">
-        {/* Step 1 — Introduction */}
+        {/* Step 1 — Select type */}
         {step === 1 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-              Register a bin
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
-              You're about to create a BINMATE label for a recycling bin in your
-              neighbourhood. Anyone who scans it can report whether it's full or
-              empty.
-            </p>
-
-            <ul className="mt-8 space-y-4">
-              {[
-                { label: "Takes about 2 minutes" },
-                { label: "You'll need access to a printer" },
-                { label: "The bin must be publicly accessible" },
-              ].map(({ label }) => (
-                <li key={label} className="flex items-start gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {label}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="mt-10 w-full rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
-            >
-              Let's get started →
-            </button>
-          </div>
-        )}
-
-        {/* Step 2 — Select type */}
-        {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
               What type of bin is it?
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Choose the recycling type that matches the bin.
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              You'll need a printer. The bin must be publicly accessible.
             </p>
 
             <Form method="post" className="mt-6">
@@ -216,8 +182,8 @@ export default function Register() {
           </div>
         )}
 
-        {/* Step 3 — QR code */}
-        {step === 3 && container && (
+        {/* Step 2 — QR code */}
+        {step === 2 && container && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
               Your QR code is ready
@@ -271,7 +237,7 @@ export default function Register() {
 
             <button
               type="button"
-              onClick={() => setStep(4)}
+              onClick={() => setStep(3)}
               className="mt-6 w-full rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
             >
               Print the label →
@@ -279,8 +245,8 @@ export default function Register() {
           </div>
         )}
 
-        {/* Step 4 — Print */}
-        {step === 4 && container && (
+        {/* Step 3 — Print */}
+        {step === 3 && container && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
               Print & stick
@@ -319,7 +285,7 @@ export default function Register() {
 
             <button
               type="button"
-              onClick={() => setStep(5)}
+              onClick={() => setStep(4)}
               className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
             >
               I've stuck it on →
@@ -327,8 +293,8 @@ export default function Register() {
           </div>
         )}
 
-        {/* Step 5 — Scan & set location */}
-        {step === 5 && container && (
+        {/* Step 4 — Scan & set location */}
+        {step === 4 && container && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
               One last step
