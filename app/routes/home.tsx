@@ -184,7 +184,7 @@ export default function Home() {
             About
           </Link>
         </div>
-        <div>
+        <div className="mt-4">
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">
             Privacy
           </h2>

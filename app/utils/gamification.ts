@@ -20,7 +20,7 @@ export function getUserDailyStreak(userId: number, requireToday = false): number
       grouped AS (
         SELECT
           day,
-          date(day, printf('-%d day', rn)) AS grp
+          date(day, printf('+%d day', rn)) AS grp
         FROM runs
       )
       SELECT day, grp FROM grouped
