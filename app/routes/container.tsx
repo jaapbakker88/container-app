@@ -24,6 +24,8 @@ import type { ContainerType } from "~/types/definitions";
 import { haversineKm } from "~/utils/haversineKm";
 import Tag from "~/components/Tag";
 import { motion } from "motion/react";
+import { MapPin, QrCode } from "lucide-react";
+import { ContainerTypeTag } from "~/utils/containerType";
 
 type NearbyContainer = ContainerType & { distanceKm: number };
 
@@ -314,14 +316,12 @@ export default function Container() {
                   {container.code}
                 </p>
                 <div className="mt-1 flex items-center gap-1.5">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Status
-                  </span>
                   {container.isFull ? (
                     <Tag type="danger">Full</Tag>
                   ) : (
                     <Tag type="success">Empty</Tag>
                   )}
+                  <ContainerTypeTag type={container.type} />
                 </div>
                 {container.updatedAt ? (
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -329,24 +329,30 @@ export default function Container() {
                   </p>
                 ) : null}
               </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setShowPrintLabel((v) => !v)}
-                  className="text-xs text-blue-500 dark:text-blue-400 font-medium hover:underline"
-                >
-                  {showPrintLabel ? "Map" : "QR label"}
-                </button>
+              <div className="flex items-center gap-2">
                 {mapsUrl && !showPrintLabel ? (
                   <a
                     href={mapsUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-blue-500 dark:text-blue-400 font-medium hover:underline"
+                    aria-label="Open in Maps"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
-                    Open in Maps →
+                    <MapPin size={16} />
                   </a>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => setShowPrintLabel((v) => !v)}
+                  aria-label={showPrintLabel ? "Show map" : "Show QR label"}
+                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+                    showPrintLabel
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  <QrCode size={16} />
+                </button>
               </div>
             </div>
           </div>
@@ -371,9 +377,7 @@ export default function Container() {
                 <p className="font-mono text-base font-bold text-gray-900 dark:text-white tracking-widest">
                   {container.code}
                 </p>
-                <span className="text-xs text-gray-500 capitalize">
-                  {container.type}
-                </span>
+                <ContainerTypeTag type={container.type} />
               </div>
             ) : staticMapUrl ? (
               <img

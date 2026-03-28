@@ -12,6 +12,7 @@ import { addContainer } from "~/db/sqlite";
 import { generateId } from "~/utils/generateId";
 import type { ContainerType } from "~/types/definitions";
 import StepIndicator from "~/components/StepIndicator";
+import { CONTAINER_TYPE_CONFIG } from "~/utils/containerType";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Register a bin — BINMATE" }];
@@ -46,13 +47,12 @@ export async function action({ request }: ActionFunctionArgs) {
 
 const BIN_TYPES: {
   type: ContainerType["type"];
-  label: string;
   description: string;
 }[] = [
-  { type: "paper", label: "Paper", description: "Newspapers, cardboard, paper packaging" },
-  { type: "plastic", label: "Plastic", description: "Bottles, containers, plastic packaging" },
-  { type: "glass", label: "Glass", description: "Bottles, jars, glass containers" },
-  { type: "mixed", label: "Mixed", description: "General recycling, mixed materials" },
+  { type: "paper", description: "Newspapers, cardboard, paper packaging" },
+  { type: "plastic", description: "Bottles, containers, plastic packaging" },
+  { type: "glass", description: "Bottles, jars, glass containers" },
+  { type: "mixed", description: "General recycling, mixed materials" },
 ];
 
 const PRINT_STYLES = `
@@ -173,25 +173,31 @@ export default function Register() {
             <Form method="post" className="mt-6">
               <input type="hidden" name="type" value={selectedType} />
               <div className="grid grid-cols-2 gap-3">
-                {BIN_TYPES.map(({ type, label, description }) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setSelectedType(type)}
-                    className={`text-left rounded-xl border-2 p-4 transition-colors ${
-                      selectedType === type
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-400"
-                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
-                    }`}
-                  >
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                      {label}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {description}
-                    </p>
-                  </button>
-                ))}
+                {BIN_TYPES.map(({ type, description }) => {
+                  const { label, Icon, color, bg } = CONTAINER_TYPE_CONFIG[type];
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedType(type)}
+                      className={`text-left rounded-xl border-2 p-4 transition-colors ${
+                        selectedType === type
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-400"
+                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg ${bg} ${color} mb-2`}>
+                        <Icon size={16} />
+                      </span>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                        {label}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
 
               {actionData && !actionData.ok && (
