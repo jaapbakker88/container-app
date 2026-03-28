@@ -1,87 +1,35 @@
-# Welcome to React Router!
+# BINMATE
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Track and report the status of recycling bins in your neighbourhood.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
-
-## Features
-
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
+## Development
 
 ```bash
 npm install
+npm run dev       # http://localhost:5173
+npm run typecheck
+npm test
 ```
 
-### Development
+## Environment variables
 
-Start the development server with HMR:
+| Variable | Required | Description |
+|---|---|---|
+| `DB_PATH` | No | Path to the SQLite database file (default: `./data/app.db`) |
+| `ADMIN_PASSWORD` | No | Password for the admin panel at `/admin`. Route returns 404 if unset. |
+| `MAPS_KEY` | No | Google Maps API key for static map tiles. Falls back to OpenStreetMap if unset. |
 
-```bash
-npm run dev
+Example `.env` for local development:
+
+```
+ADMIN_PASSWORD=secret
+MAPS_KEY=your-google-maps-api-key
 ```
 
-Your application will be available at `http://localhost:5173`.
+## Admin panel
 
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
+Visit `/admin` and enter your `ADMIN_PASSWORD` to manage bins (mark full/empty, clear location, delete).
 
 ## Deployment
 
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+Hosted on a self-managed server via [Coolify](https://coolify.io) using the included `Dockerfile`. Set the environment variables above in your Coolify service configuration.
