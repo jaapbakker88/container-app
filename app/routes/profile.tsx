@@ -1,19 +1,39 @@
 import { Link, useLoaderData, type LoaderFunctionArgs } from "react-router";
-import { getOrCreateUser } from "~/db/sqlite";
+import { getGlobalStats, getOrCreateUser } from "~/db/sqlite";
 import { getUserDailyStreak } from "~/utils/gamification";
 
 export function meta() {
-  return [{ title: "My profile — BINMATE" }];
+  return [{ title: "Stats — BINMATE" }];
 }
 
 export function loader({ request }: LoaderFunctionArgs) {
   const { user } = getOrCreateUser(request);
   const streak = getUserDailyStreak(user.id);
-  return { user, streak };
+  const global = getGlobalStats();
+  return { user, streak, global };
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-4 py-3">
+      <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+        {label}
+      </p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 export default function Profile() {
-  const { user, streak } = useLoaderData<typeof loader>();
+  const { user, streak, global } = useLoaderData<typeof loader>();
 
   const lastReportFormatted = user.last_reported_at
     ? new Date(user.last_reported_at).toLocaleDateString("nl-NL", {
@@ -25,41 +45,43 @@ export default function Profile() {
 
   return (
     <div className="container mx-auto max-w-3xl p-4 pt-10">
-      <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+      <Link
+        to="/"
+        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+      >
         ← Back
       </Link>
 
       <h1 className="font-bold text-2xl tracking-tight text-gray-900 dark:text-white mt-6">
-        {user.name ?? "Anonymous"}
+        Stats
       </h1>
 
-      <div className="mt-6 space-y-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-4 py-3">
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            Total reports
-          </p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
-            {user.reports_count}
-          </p>
-        </div>
+      <h2 className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-6 mb-3">
+        Your contributions
+      </h2>
+      <div className="space-y-3">
+        <StatCard label="Name" value={user.name ?? "Anonymous"} />
+        <StatCard label="Reports made" value={user.reports_count} />
+        <StatCard
+          label="Current streak"
+          value={`${streak} ${streak === 1 ? "day" : "days"}`}
+        />
+        <StatCard
+          label="Last report"
+          value={lastReportFormatted ?? "No reports yet"}
+        />
+      </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-4 py-3">
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            Current streak
-          </p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
-            {streak} {streak === 1 ? "day" : "days"}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-4 py-3">
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            Last report
-          </p>
-          <p className="text-base font-semibold text-gray-900 dark:text-white mt-0.5">
-            {lastReportFormatted ?? "No reports yet"}
-          </p>
-        </div>
+      <h2 className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-8 mb-3">
+        Community
+      </h2>
+      <div className="space-y-3">
+        <StatCard label="Bins registered" value={global.totalBins} />
+        <StatCard label="Total reports" value={global.totalReports} />
+        <StatCard
+          label="Active contributors"
+          value={global.activeContributors}
+        />
       </div>
     </div>
   );
