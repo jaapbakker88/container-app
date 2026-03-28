@@ -149,6 +149,19 @@ export default function Container() {
   const [panelHeight, setPanelHeight] = useState(320);
   const [showPrintLabel, setShowPrintLabel] = useState(false);
 
+  // Reset all UI state when navigating between containers (React Router reuses
+  // this component for every /:containerId match without unmounting it).
+  const [currentCode, setCurrentCode] = useState(container.code);
+  if (container.code !== currentCode) {
+    setCurrentCode(container.code);
+    setPanelVisible(true);
+    setThanks(false);
+    setShowNearby(container.isFull === 1);
+    setShowPrintLabel(false);
+    setLocError(null);
+    setIsFindingLoc(false);
+  }
+
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(containerUrl)}`;
 
   const hasLocation = container.lat != null && container.lng != null;
