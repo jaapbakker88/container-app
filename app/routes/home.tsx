@@ -9,6 +9,7 @@ import { useState } from "react";
 import { haversineKm } from "~/utils/haversineKm";
 import type { ContainerType } from "~/types/definitions";
 import Tag from "~/components/Tag";
+import { ContainerTypeTag } from "~/utils/containerType";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -120,8 +121,9 @@ export default function Home() {
                           <span className="font-semibold text-gray-900 dark:text-white text-sm">
                             {item.code}
                           </span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
-                            {item.distanceKm.toFixed(2)} km away · {item.type}
+                          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+                            {item.distanceKm.toFixed(2)} km away
+                            <ContainerTypeTag type={item.type} />
                           </span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -151,9 +153,9 @@ export default function Home() {
                     <span className="font-semibold text-gray-900 dark:text-white text-sm">
                       {container.code}
                     </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                      {container.lat != null ? "Location set" : "No location"}{" "}
-                      · {container.type}
+                    <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+                      {container.lat != null ? "Location set" : "No location"}
+                      <ContainerTypeTag type={container.type} />
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
