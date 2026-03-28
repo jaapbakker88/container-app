@@ -159,7 +159,7 @@ export default function Home() {
         <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <div className="flex gap-4">
             <Link to="/profile" className="text-blue-600 dark:text-blue-400 hover:underline">
-              My profile
+              Stats
             </Link>
             <Link to="/about" className="text-blue-600 dark:text-blue-400 hover:underline">
               About

@@ -158,4 +158,23 @@ export function getOrCreateUser(request: Request): { user: UserType; setCookie: 
   return { user, setCookie };
 }
 
+export function getGlobalStats(): {
+  totalBins: number;
+  totalReports: number;
+  activeContributors: number;
+} {
+  const { totalBins } = db
+    .prepare("SELECT COUNT(*) AS totalBins FROM containers")
+    .get() as { totalBins: number };
+  const { totalReports } = db
+    .prepare("SELECT COUNT(*) AS totalReports FROM reports")
+    .get() as { totalReports: number };
+  const { activeContributors } = db
+    .prepare(
+      "SELECT COUNT(DISTINCT user_id) AS activeContributors FROM reports"
+    )
+    .get() as { activeContributors: number };
+  return { totalBins, totalReports, activeContributors };
+}
+
 export { db };
