@@ -226,47 +226,6 @@ export default function Container() {
         </header>
 
         <div className="flex-1 flex flex-col px-4 pb-[280px] overflow-y-auto">
-          <div className="flex justify-end mb-1">
-            <button
-              type="button"
-              onClick={() => setShowPrintLabel((v) => !v)}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline py-1"
-            >
-              {showPrintLabel ? "Hide label" : "Print label"}
-            </button>
-          </div>
-
-          {showPrintLabel && (
-            <div className="mb-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col items-center gap-2">
-              <div
-                id="container-print-label"
-                className="flex flex-col items-center gap-2"
-              >
-                <p className="text-xs font-bold text-gray-400 tracking-widest uppercase">
-                  BINMATE
-                </p>
-                <img
-                  src={qrSrc}
-                  alt={`QR code for bin ${container.code}`}
-                  className="w-36 h-36"
-                />
-                <p className="font-mono text-lg font-bold text-gray-900 dark:text-white tracking-widest">
-                  {container.code}
-                </p>
-                <span className="text-xs text-gray-500 capitalize">
-                  {container.type}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Print label
-              </button>
-            </div>
-          )}
-
           {thanks ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
               <p className="text-2xl mb-1">✓</p>
@@ -370,16 +329,25 @@ export default function Container() {
                   </p>
                 ) : null}
               </div>
-              {mapsUrl ? (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-blue-500 dark:text-blue-400 font-medium hover:underline mt-1"
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPrintLabel((v) => !v)}
+                  className="text-xs text-blue-500 dark:text-blue-400 font-medium hover:underline"
                 >
-                  Open in Maps →
-                </a>
-              ) : null}
+                  {showPrintLabel ? "Map" : "QR label"}
+                </button>
+                {mapsUrl && !showPrintLabel ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-500 dark:text-blue-400 font-medium hover:underline"
+                  >
+                    Open in Maps →
+                  </a>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -387,7 +355,27 @@ export default function Container() {
             className="w-full overflow-hidden bg-gray-100 dark:bg-gray-800"
             style={{ aspectRatio: "4 / 3" }}
           >
-            {staticMapUrl ? (
+            {showPrintLabel ? (
+              <div
+                id="container-print-label"
+                className="w-full h-full flex flex-col items-center justify-center gap-2 bg-white dark:bg-gray-900"
+              >
+                <p className="text-xs font-bold text-gray-400 tracking-widest uppercase">
+                  BINMATE
+                </p>
+                <img
+                  src={qrSrc}
+                  alt={`QR code for bin ${container.code}`}
+                  className="w-32 h-32"
+                />
+                <p className="font-mono text-base font-bold text-gray-900 dark:text-white tracking-widest">
+                  {container.code}
+                </p>
+                <span className="text-xs text-gray-500 capitalize">
+                  {container.type}
+                </span>
+              </div>
+            ) : staticMapUrl ? (
               <img
                 src={staticMapUrl}
                 alt="Container location map"
@@ -404,7 +392,17 @@ export default function Container() {
             )}
           </div>
 
-          {hasLocation ? (
+          {showPrintLabel ? (
+            <div className="safe-bottom">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="block w-full bg-gray-800 dark:bg-gray-700 px-3 py-4 text-white font-semibold text-base hover:bg-gray-900 dark:hover:bg-gray-600 active:bg-black transition-colors"
+              >
+                Print label
+              </button>
+            </div>
+          ) : hasLocation ? (
             <div className="w-full flex safe-bottom">
               <Form method="post" className="w-full">
                 <input type="hidden" name="intent" value="fullness" />
