@@ -1,9 +1,30 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { action, loader } from "./container";
 import { db } from "~/db/sqlite";
 
-function makeRequest(url: string, options?: RequestInit) {
-  return new Request(url, options);
+// React Router 7 requires unstable_pattern in args; cast for tests
+function actionArgs(
+  url: string,
+  params: Record<string, string>,
+  options?: RequestInit
+): ActionFunctionArgs {
+  return {
+    request: new Request(url, options),
+    params,
+    context: {},
+  } as unknown as ActionFunctionArgs;
+}
+
+function loaderArgs(
+  url: string,
+  params: Record<string, string>
+): LoaderFunctionArgs {
+  return {
+    request: new Request(url),
+    params,
+    context: {},
+  } as unknown as LoaderFunctionArgs;
 }
 
 function makeFormRequest(url: string, fields: Record<string, string>) {
@@ -27,14 +48,17 @@ beforeEach(() => {
 
 describe("container action — fullness", () => {
   it("marks container as full and returns correct payload", async () => {
-    const result = await action({
-      request: makeFormRequest("http://localhost/AAAAA", {
-        intent: "fullness",
-        fullness: "full",
-      }),
-      params: { containerId: "AAAAA" },
-      context: {},
-    });
+    const result = await action(
+      actionArgs("http://localhost/AAAAA", { containerId: "AAAAA" }, {
+        method: "POST",
+        body: (() => {
+          const f = new FormData();
+          f.set("intent", "fullness");
+          f.set("fullness", "full");
+          return f;
+        })(),
+      })
+    );
 
     expect(result).toEqual({ intent: "fullness", updated: true, isFull: true });
 
@@ -47,20 +71,19 @@ describe("container action — fullness", () => {
   it("marks container as empty and returns correct payload", async () => {
     db.prepare("UPDATE containers SET isFull = 1 WHERE code = 'AAAAA'").run();
 
-    const result = await action({
-      request: makeFormRequest("http://localhost/AAAAA", {
-        intent: "fullness",
-        fullness: "empty",
-      }),
-      params: { containerId: "AAAAA" },
-      context: {},
-    });
+    const result = await action(
+      actionArgs("http://localhost/AAAAA", { containerId: "AAAAA" }, {
+        method: "POST",
+        body: (() => {
+          const f = new FormData();
+          f.set("intent", "fullness");
+          f.set("fullness", "empty");
+          return f;
+        })(),
+      })
+    );
 
-    expect(result).toEqual({
-      intent: "fullness",
-      updated: true,
-      isFull: false,
-    });
+    expect(result).toEqual({ intent: "fullness", updated: true, isFull: false });
 
     const row = db
       .prepare("SELECT isFull FROM containers WHERE code = ?")
@@ -69,14 +92,17 @@ describe("container action — fullness", () => {
   });
 
   it("returns error for invalid fullness value without touching DB", async () => {
-    const result = await action({
-      request: makeFormRequest("http://localhost/AAAAA", {
-        intent: "fullness",
-        fullness: "maybe",
-      }),
-      params: { containerId: "AAAAA" },
-      context: {},
-    });
+    const result = await action(
+      actionArgs("http://localhost/AAAAA", { containerId: "AAAAA" }, {
+        method: "POST",
+        body: (() => {
+          const f = new FormData();
+          f.set("intent", "fullness");
+          f.set("fullness", "maybe");
+          return f;
+        })(),
+      })
+    );
 
     expect(result).toMatchObject({ error: expect.any(String) });
 
@@ -87,40 +113,28 @@ describe("container action — fullness", () => {
   });
 });
 
+type LoaderResult = Exclude<Awaited<ReturnType<typeof loader>>, Response>;
+
 describe("container loader — nearby list", () => {
   it("excludes the current container from the nearby list", () => {
-    const result = loader({
-      request: makeRequest("http://localhost/AAAAA"),
-      params: { containerId: "AAAAA" },
-      context: {},
-    });
+    const result = loader(loaderArgs("http://localhost/AAAAA", { containerId: "AAAAA" }));
 
-    // loader may return a redirect Response for invalid codes; for valid
-    // codes it returns a plain object
     expect(result).not.toBeInstanceOf(Response);
-    const { nearby } = result as Awaited<ReturnType<typeof loader>>;
-    expect(nearby.every((c) => c.code !== "AAAAA")).toBe(true);
+    const { nearby } = result as LoaderResult;
+    expect(nearby.every((c: LoaderResult["nearby"][number]) => c.code !== "AAAAA")).toBe(true);
   });
 
   it("excludes full containers from the nearby list", () => {
-    const result = loader({
-      request: makeRequest("http://localhost/AAAAA"),
-      params: { containerId: "AAAAA" },
-      context: {},
-    });
+    const result = loader(loaderArgs("http://localhost/AAAAA", { containerId: "AAAAA" }));
 
-    const { nearby } = result as Awaited<ReturnType<typeof loader>>;
-    expect(nearby.find((c) => c.code === "CCCCC")).toBeUndefined();
+    const { nearby } = result as LoaderResult;
+    expect(nearby.find((c: LoaderResult["nearby"][number]) => c.code === "CCCCC")).toBeUndefined();
   });
 
   it("includes nearby empty containers in the list", () => {
-    const result = loader({
-      request: makeRequest("http://localhost/AAAAA"),
-      params: { containerId: "AAAAA" },
-      context: {},
-    });
+    const result = loader(loaderArgs("http://localhost/AAAAA", { containerId: "AAAAA" }));
 
-    const { nearby } = result as Awaited<ReturnType<typeof loader>>;
-    expect(nearby.find((c) => c.code === "BBBBB")).toBeDefined();
+    const { nearby } = result as LoaderResult;
+    expect(nearby.find((c: LoaderResult["nearby"][number]) => c.code === "BBBBB")).toBeDefined();
   });
 });

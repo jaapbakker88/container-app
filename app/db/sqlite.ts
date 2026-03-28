@@ -177,4 +177,20 @@ export function getGlobalStats(): {
   return { totalBins, totalReports, activeContributors };
 }
 
+export function setContainerStatus(code: string, isFull: boolean): void {
+  db.prepare(
+    "UPDATE containers SET isFull = ?, updatedAt = datetime('now') WHERE code = ?"
+  ).run(isFull ? 1 : 0, code);
+}
+
+export function deleteContainer(code: string): void {
+  db.prepare("DELETE FROM containers WHERE code = ?").run(code);
+}
+
+export function clearContainerLocation(code: string): void {
+  db.prepare(
+    "UPDATE containers SET lat = NULL, lng = NULL, updatedAt = datetime('now') WHERE code = ?"
+  ).run(code);
+}
+
 export { db };

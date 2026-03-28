@@ -5,5 +5,6 @@ export default [
   route("about", "routes/about.tsx"),
   route("profile", "routes/profile.tsx"),
   route("register", "routes/register.tsx"),
+  route("admin", "routes/admin.tsx"),
   route(":containerId", "routes/container.tsx"),
 ] satisfies RouteConfig;
