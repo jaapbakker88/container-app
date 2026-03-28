@@ -8,7 +8,7 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addLocationToContainer,
   getContainers,
@@ -145,6 +145,8 @@ export default function Container() {
   const [panelVisible, setPanelVisible] = useState(true);
   const [thanks, setThanks] = useState(false);
   const [showNearby, setShowNearby] = useState(container.isFull === 1);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelHeight, setPanelHeight] = useState(320);
   const [showPrintLabel, setShowPrintLabel] = useState(false);
 
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(containerUrl)}`;
@@ -192,6 +194,16 @@ export default function Container() {
     }
   }, [actionData]);
 
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setPanelHeight(entry.contentRect.height);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const CONTAINER_PRINT_STYLES = `
     @media print {
       body * { visibility: hidden; }
@@ -227,7 +239,10 @@ export default function Container() {
           </h1>
         </header>
 
-        <div className="flex-1 flex flex-col px-4 pb-[280px] overflow-y-auto">
+        <div
+          className="flex-1 flex flex-col px-4 overflow-y-auto"
+          style={{ paddingBottom: panelVisible ? panelHeight + 16 : 24 }}
+        >
           {thanks ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
               <p className="text-2xl mb-1">✓</p>
@@ -298,6 +313,7 @@ export default function Container() {
         </div>
 
         <motion.div
+          ref={panelRef}
           className="flex flex-col bg-white dark:bg-gray-900 rounded-t-[20px] overflow-hidden absolute bottom-0 left-0 right-0"
           style={{ boxShadow: "0 -4px 20px 0 rgba(0,0,0,0.10)" }}
           initial={{ y: 0, opacity: 1 }}
