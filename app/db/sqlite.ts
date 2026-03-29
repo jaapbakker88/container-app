@@ -37,7 +37,6 @@ db.exec(`
     user_id INTEGER,
     status TEXT NOT NULL CHECK (status IN ('full','empty')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(container_code) REFERENCES containers(code),
     FOREIGN KEY(user_id) REFERENCES users(id)
   );
 
@@ -48,6 +47,30 @@ db.exec(`
 
 // Migrations for existing databases
 try { db.exec("ALTER TABLE containers ADD COLUMN updatedAt TEXT"); } catch { /* already exists */ }
+
+// Drop FK from reports.container_code so containers can be deleted without affecting reports/streaks
+try {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='reports'").get() as { sql: string } | undefined;
+  if (row?.sql.includes("FOREIGN KEY(container_code)")) {
+    db.exec(`
+      BEGIN;
+      CREATE TABLE reports_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        container_code TEXT NOT NULL,
+        user_id INTEGER,
+        status TEXT NOT NULL CHECK (status IN ('full','empty')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      );
+      INSERT INTO reports_new SELECT * FROM reports;
+      DROP TABLE reports;
+      ALTER TABLE reports_new RENAME TO reports;
+      CREATE INDEX IF NOT EXISTS idx_reports_user_id ON reports(user_id);
+      CREATE INDEX IF NOT EXISTS idx_reports_container_code ON reports(container_code);
+      COMMIT;
+    `);
+  }
+} catch { /* already migrated */ }
 
 export function getContainers(): ContainerType[] {
   return db.prepare("SELECT * FROM containers").all() as ContainerType[];
@@ -184,11 +207,7 @@ export function setContainerStatus(code: string, isFull: boolean): void {
 }
 
 export function deleteContainer(code: string): void {
-  const run = db.transaction(() => {
-    db.prepare("DELETE FROM reports WHERE container_code = ?").run(code);
-    db.prepare("DELETE FROM containers WHERE code = ?").run(code);
-  });
-  run();
+  db.prepare("DELETE FROM containers WHERE code = ?").run(code);
 }
 
 export function clearContainerLocation(code: string): void {
