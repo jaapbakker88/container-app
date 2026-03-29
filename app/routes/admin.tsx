@@ -242,7 +242,7 @@ export default function Admin() {
                   intent="delete"
                   label="Delete"
                   danger
-                  confirm={`Delete bin ${bin.code}? This will also delete all reports for this bin.`}
+                  confirm={`Delete bin ${bin.code}? Reports will be kept.`}
                 />
               </div>
             </div>
