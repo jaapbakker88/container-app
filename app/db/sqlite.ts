@@ -184,7 +184,11 @@ export function setContainerStatus(code: string, isFull: boolean): void {
 }
 
 export function deleteContainer(code: string): void {
-  db.prepare("DELETE FROM containers WHERE code = ?").run(code);
+  const run = db.transaction(() => {
+    db.prepare("DELETE FROM reports WHERE container_code = ?").run(code);
+    db.prepare("DELETE FROM containers WHERE code = ?").run(code);
+  });
+  run();
 }
 
 export function clearContainerLocation(code: string): void {
